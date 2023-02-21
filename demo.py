@@ -5,7 +5,7 @@ import textwrap
 # хуман редибл мак AA:BB:CC:DD:EE:FF
 def get_hr_mac(bytes_mac):
     bytes_str = map('{:02x}'.format, bytes_mac)
-    return ''.join(bytes_str).upper()
+    return ':'.join(bytes_str).upper()
     
 # распакоука
 def eth_frame(data):

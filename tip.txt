@@ -1,0 +1,21 @@
+If you're on Windows: I was able to get this section of the tutorial completed by using:
+HOST = socket.gethostbyname(socket.gethostname()) #this could be hardcoded to be the ipv4 
+address of your wireless/wired connection (use ipconfig ind the command prompt to determine this address)
+
+instead of:
+ "conn = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.ntohs(3))"
+
+I used: 
+conn = socket.socket(socket.AF_INET,socket.SOCK_RAW,socket.IPPROTO_IP) 
+ # create a raw socket and bind it to the public interface
+ conn.bind((HOST, 0))
+ # Include IP headers
+ conn.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
+ #receives all packets
+ conn.ioctl(socket.SIO_RCVALL, socket.RCVALL_ON)
+I also had an issue where it seemed like I wasn't finding any packets, even though 
+I was sending and receiving data. This was caused by the gethostbyname(socket.gethostname()) line. 
+If this happens, the host may be incorrectly acquired. For testing: use ipconfig, 
+you can hardcode the values: "conn.bind('192.168.1.7',0)"
+
+ALSO (don't forget to run your script/IDE with administration privileges.

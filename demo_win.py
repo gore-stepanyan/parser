@@ -15,7 +15,6 @@ def eth_frame(data):
     return get_hr_mac(dest_mac), get_hr_mac(src_mac), socket.htons(proto), data[14:]
 
 def main():
-
     HOST = socket.gethostbyname(socket.gethostname())
     s = socket.socket(socket.AF_INET,socket.SOCK_RAW,socket.IPPROTO_IP)
     s.bind((HOST, 0))

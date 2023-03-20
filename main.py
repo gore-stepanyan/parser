@@ -1,5 +1,4 @@
 import pyshark
-import struct
 from packet import Packet
 import socket
 import time
@@ -10,4 +9,5 @@ def main():
         packet = Packet()
         packet.read(p.get_raw_packet())
         print(packet.fields)
+        
 main()

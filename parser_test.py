@@ -41,8 +41,32 @@ def main():
         if 'ip_proto' in packet.fields:
             if reference.ip.proto != packet.fields['ip_proto']:
                 print('ip proto error')
-                count = count + 1     
+                count = count + 1
+
+        if reference.ip.proto == '17':
+            if 'src_port' in packet.fields:
+                if reference.udp.srcport != packet.fields['src_port']:
+                    print('src port error')
+                    count = count + 1
+
+        if reference.ip.proto == '17':
+            if 'dst_port' in packet.fields:
+                if reference.udp.dstport != packet.fields['dst_port']:
+                    print('dst port error')
+                    count = count + 1            
     
+        if reference.ip.proto == '6':
+            if 'src_port' in packet.fields:
+                if reference.tcp.srcport != packet.fields['src_port']:
+                    print('src port error')
+                    count = count + 1
+
+        if reference.ip.proto == '6':
+            if 'dst_port' in packet.fields:
+                if reference.tcp.dstport != packet.fields['dst_port']:
+                    print('dst port error')
+                    count = count + 1   
+
         #print(count)    
 
 main()

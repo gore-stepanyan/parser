@@ -7,11 +7,11 @@ def main():
     count = 0
     capture = pyshark.FileCapture(input_file='pcap_session.pcap', display_filter='', use_json=True, include_raw=True)
     print('hello')
+    packet = Packet()
     for reference_packet in capture:
-        packet = Packet()
         packet.read(reference_packet.get_raw_packet())
         reference = in_mem_capture.parse_packet(binary_packet = reference_packet.get_raw_packet())
-        print('hmm...')
+        print('hmm...', count)
                 
         if 'eth_src' in packet.fields:
             if (reference.eth.src.upper()) != packet.fields['eth_src']:
@@ -66,7 +66,5 @@ def main():
                 if reference.tcp.dstport != packet.fields['dst_port']:
                     print('dst port error')
                     count = count + 1   
-
-        #print(count)    
 
 main()

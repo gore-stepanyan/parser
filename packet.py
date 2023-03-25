@@ -1,4 +1,13 @@
 import struct
+import re
+
+info_invite_re = re.compile(r'(INVITE) sip:')
+info_200_Ok_re =  re.compile(r'(200 Ok)')
+cseq_method_re = re.compile(r'CSeq: \d+ (\w+)')
+sip_re = re.compile(r'SIP\/2\.0')
+rtp_port_re = re.compile(r'm=audio (\d+)')
+rtcp_port_re = re.compile(r'a=rtcp:(\d+)')
+call_id_re = re.compile(r'Call-ID: ([a-zA-Z0-9]+)')
 
 class Packet(object):
     __slots__ = (
@@ -40,6 +49,38 @@ class Packet(object):
         src_port, dst_port, hdr_len_reserved = struct.unpack('! H H 8x 1s', data[:13])
         hdr_len = int(hdr_len_reserved.hex()[0]) * 4
         return str(src_port), str(dst_port), data[hdr_len:]
+      
+    def parse_sip(self, data):
+        if info_invite_re.search(data):
+            sip_info = info_invite_re.findall(data)[0]
+        elif info_200_Ok_re.search(data):
+            sip_info = info_200_Ok_re.findall(data)[0]
+        else:
+            sip_info = ''
+
+        if cseq_method_re.search(data):
+            cseq_method = cseq_method_re.findall(data)[0]
+        else:
+            cseq_method = ''
+
+        if call_id_re.search(data):
+            call_id = call_id_re.findall(data)[0]
+        else:
+            call_id = ''
+
+        if rtp_port_re.search(data):
+            rtp_port = rtp_port_re.findall(data)[0]
+        else:
+            rtp_port = ''
+
+        if rtcp_port_re.search(data):
+            rtcp_port = rtcp_port_re.findall(data)[0]
+        elif rtp_port:
+            rtcp_port = str(int(rtp_port) + 1)
+        else:
+            rtcp_port = ''
+        
+        return sip_info, cseq_method, call_id, rtp_port, rtcp_port
 
     def read(self, data):
         eth_dst, eth_src, eth_type, eth_payload = self.read_eth_header(data)
@@ -65,3 +106,20 @@ class Packet(object):
         
         self.fields.update(src_port = src_port)
         self.fields.update(dst_port = dst_port)
+        
+        payload_string = payload.decode('utf-8', 'replace')
+        if not sip_re.search(payload_string):
+            return
+        
+        sip_info, cseq_method, call_id,  rtp_port, rtcp_port = self.parse_sip(payload_string)
+        self.fields.update(sip_info = sip_info)
+        self.fields.update(cseq_method = cseq_method)
+        self.fields.update(call_id = call_id)
+        self.fields.update(rtp_port = rtp_port)
+        self.fields.update(rtcp_port = rtcp_port)  
+        
+        ###################################
+
+        # if dst_port=='5060':
+        #     payload_string = payload.decode('utf-8', 'replace')
+        #     print(payload_string)

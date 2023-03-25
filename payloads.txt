@@ -1,0 +1,59 @@
+hmm... 0
+INVITE sip:Nokia@192.168.43.58 SIP/2.0
+Via: SIP/2.0/UDP 192.168.43.236:5060;branch=z9hG4bK.bwnakQ5Yt;rport
+From: "Andrei" <sip:Andrei@192.168.43.236>;tag=IFiB4IJoN
+To: sip:Nokia@192.168.43.58
+CSeq: 20 INVITE
+Call-ID: xGYHcL0tNy
+Max-Forwards: 70
+Supported: replaces, outbound, gruu
+Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, NOTIFY, MESSAGE, SUBSCRIBE, INFO, PRACK, UPDATE
+Content-Type: application/sdp
+Content-Length: 234
+Contact: <sip:192.168.43.236;transport=udp>;+sip.instance="<urn:uuid:84ba50de-f75c-0082-98e3-d5d1ed5ab9aa>"
+User-Agent: Linphone Desktop/4.4.1 (BGEAM-2000) Windows 10 Version 2009, Qt 5.15.2 LinphoneCore/5.1.19-1-g6cdd0918e
+
+v=0
+o=Andrei 1663 1408 IN IP4 192.168.43.236
+s=Talk
+c=IN IP4 192.168.43.236
+t=0 0
+a=rtcp-xr:rcvr-rtt=all:10000 stat-summary=loss,dup,jitt,TTL voip-metrics
+m=audio 7078 RTP/AVP 0
+a=rtcp-fb:* trr-int 5000
+a=rtcp-fb:* ccm tmmbr
+
+hmm... 0
+SIP/2.0 100 Trying
+Via: SIP/2.0/UDP 192.168.43.236:5060;branch=z9hG4bK.bwnakQ5Yt;rport
+From: "Andrei" <sip:Andrei@192.168.43.236>;tag=IFiB4IJoN
+To: sip:Nokia@192.168.43.58
+Call-ID: xGYHcL0tNy
+CSeq: 20 INVITE
+
+
+hmm... 0
+SIP/2.0 183 Session progress
+Via: SIP/2.0/UDP 192.168.43.236:5060;branch=z9hG4bK.bwnakQ5Yt;rport
+From: "Andrei" <sip:Andrei@192.168.43.236>;tag=IFiB4IJoN
+To: <sip:Nokia@192.168.43.58>;tag=NbkRlHC
+Call-ID: xGYHcL0tNy
+CSeq: 20 INVITE
+User-Agent: LinphoneAndroid/5.0.7 (Nokia 6.1) LinphoneSDK/5.2.27 (tags/5.2.27^0)
+Supported: replaces, outbound, gruu, path, record-aware
+Content-Type: application/sdp
+Content-Length: 246
+
+v=0
+o=Nokia 3311 3515 IN IP4 192.168.43.58
+s=Talk
+c=IN IP4 192.168.43.58
+t=0 0
+a=rtcp-xr:rcvr-rtt=all:10000 stat-summary=loss,dup,jitt,TTL voip-metrics
+m=audio 41465 RTP/AVP 0
+a=rtcp:41192
+a=rtcp-fb:* trr-int 5000
+a=rtcp-fb:* ccm tmmbr
+
+hmm... 0
+☺!↕�B�▲it��♀�↓"�►

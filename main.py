@@ -1,16 +1,17 @@
 import pyshark
 from packet import Packet
-import socket
+from packet_handler_new import PacketHandler
 import time
 
 def main():
-    count = 0
+    packetHandler = PacketHandler()
+    packet = Packet()
     capture = pyshark.FileCapture(input_file='pcap_session.pcap', display_filter='', use_json=True, include_raw=True)
     for p in capture:
-        packet = Packet()
         packet.read(p.get_raw_packet())
-        count = count + 1
+        packetHandler.on_packet_arrive(packet)
         print("\033c", end='')
         print(packet.fields)
+        #input()
         
 main()

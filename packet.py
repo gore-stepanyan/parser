@@ -11,21 +11,26 @@ call_id_re = re.compile(r'Call-ID: ([a-zA-Z0-9]+)')
 
 class Packet(object):
     __slots__ = (
-        "fields"
+        'fields',
+        'rtp_ports',
+        'rtcp_ports'
     )
 
     def __init__(self):
         self.fields = {}
+        self.rtp_ports = []
+        self.rtcp_ports = []
 
     # хуман редибл мак AA:BB:CC:DD:EE:FF
     def get_hr_mac(self, bytes_mac):
         bytes_str = map('{:02x}'.format, bytes_mac)
         return ':'.join(bytes_str).upper()
 
+    # хуман редибл айпи 192.168.0.0
     def get_hr_ipv4(self, bytes_ipv4):
         return '.'.join(map(str, bytes_ipv4))
 
-    # распакоука
+    # распаковка
     def read_eth_header(self, data):
         # читаем первые 6 + 6 + 2 = 14 байт, H - short uint - два байта
         eth_dst, eth_src, eth_type = struct.unpack('! 6s 6s H', data[:14])
@@ -82,7 +87,14 @@ class Packet(object):
         
         return sip_info, cseq_method, call_id, rtp_port, rtcp_port
 
+    # по четыре байта на таймштампы и дилэй
+    def read_rtcp_packet(self, data):
+        ts_msw, ts_lsw, dlsr = struct.unpack('! 8x I I 32x I', data[:52])
+        return ts_msw, ts_lsw, dlsr
+
     def read(self, data):
+        self.fields.clear() # обновим поля
+
         eth_dst, eth_src, eth_type, eth_payload = self.read_eth_header(data)
         if eth_type != '0x0800': #только IPv4 EtherTypes
             return
@@ -108,18 +120,24 @@ class Packet(object):
         self.fields.update(dst_port = dst_port)
         
         payload_string = payload.decode('utf-8', 'replace')
-        if not sip_re.search(payload_string):
-            return
-        
-        sip_info, cseq_method, call_id,  rtp_port, rtcp_port = self.parse_sip(payload_string)
-        self.fields.update(sip_info = sip_info)
-        self.fields.update(cseq_method = cseq_method)
-        self.fields.update(call_id = call_id)
-        self.fields.update(rtp_port = rtp_port)
-        self.fields.update(rtcp_port = rtcp_port)  
-        
-        ###################################
+        if sip_re.search(payload_string):
+            sip_info, cseq_method, call_id,  rtp_port, rtcp_port = self.parse_sip(payload_string)
+            self.fields.update(app_proto = 'sip')
+            self.fields.update(sip_info = sip_info)
+            self.fields.update(cseq_method = cseq_method)
+            self.fields.update(call_id = call_id)
+            self.fields.update(rtp_port = rtp_port)
+            self.fields.update(rtcp_port = rtcp_port)
 
-        # if dst_port=='5060':
-        #     payload_string = payload.decode('utf-8', 'replace')
-        #     print(payload_string)
+            # запомним ртп/ртсп порты чтобы парсить соответствующие пакеты
+            if rtp_port and rtp_port not in self.rtp_ports:
+                self.rtp_ports.append(rtp_port)
+            if rtcp_port and rtcp_port not in self.rtcp_ports:
+                self.rtcp_ports.append(rtcp_port)
+
+        # нужны ртсп пакеты не короче 44 байт
+        if (src_port in self.rtcp_ports or dst_port in self.rtcp_ports) and len(payload) >= 52:
+            ts_msw, ts_lsw, dlsr = self.read_rtcp_packet(payload)
+            self.fields.update(ts_msw = ts_msw)
+            self.fields.update(ts_lsw = ts_lsw)
+            self.fields.update(dlsr = dlsr)

@@ -10,8 +10,8 @@ def main():
     for p in capture:
         packet.read(p.get_raw_packet())
         packetHandler.on_packet_arrive(packet)
-        print("\033c", end='')
-        print(packet.fields)
+        #print("\033c", end='')
+        #print(packet.fields)
         #input()
         
 main()

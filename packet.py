@@ -3,6 +3,7 @@ import re
 
 info_invite_re = re.compile(r'(INVITE) sip:')
 info_200_Ok_re =  re.compile(r'(200 Ok)')
+info_bye_re = re.compile(r'(BYE) sip:')
 cseq_method_re = re.compile(r'CSeq: \d+ (\w+)')
 sip_re = re.compile(r'SIP\/2\.0')
 rtp_port_re = re.compile(r'm=audio (\d+)')
@@ -60,6 +61,8 @@ class Packet(object):
             sip_info = info_invite_re.findall(data)[0]
         elif info_200_Ok_re.search(data):
             sip_info = info_200_Ok_re.findall(data)[0]
+        elif info_bye_re.search(data):
+            sip_info = info_bye_re.findall(data)[0]
         else:
             sip_info = ''
 
@@ -122,7 +125,7 @@ class Packet(object):
         payload_string = payload.decode('utf-8', 'replace')
         if sip_re.search(payload_string):
             sip_info, cseq_method, call_id,  rtp_port, rtcp_port = self.parse_sip(payload_string)
-            self.fields.update(app_proto = 'sip')
+            self.fields.update(proto_info = 'sip')
             self.fields.update(sip_info = sip_info)
             self.fields.update(cseq_method = cseq_method)
             self.fields.update(call_id = call_id)
@@ -138,6 +141,7 @@ class Packet(object):
         # нужны ртсп пакеты не короче 44 байт
         if (src_port in self.rtcp_ports or dst_port in self.rtcp_ports) and len(payload) >= 52:
             ts_msw, ts_lsw, dlsr = self.read_rtcp_packet(payload)
+            self.fields.update(proto_info = 'rtcp')
             self.fields.update(ts_msw = ts_msw)
             self.fields.update(ts_lsw = ts_lsw)
             self.fields.update(dlsr = dlsr)

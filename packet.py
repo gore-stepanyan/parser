@@ -2,13 +2,13 @@ import struct
 import re
 
 info_invite_re = re.compile(r'(INVITE) sip:')
-info_200_Ok_re =  re.compile(r'(200 Ok)')
+info_200_Ok_re =  re.compile(r'(200 O[Kk])')
 info_bye_re = re.compile(r'(BYE) sip:')
 cseq_method_re = re.compile(r'CSeq: \d+ (\w+)')
 sip_re = re.compile(r'SIP\/2\.0')
 rtp_port_re = re.compile(r'm=audio (\d+)')
 rtcp_port_re = re.compile(r'a=rtcp:(\d+)')
-call_id_re = re.compile(r'Call-ID: ([a-zA-Z0-9]+)')
+call_id_re = re.compile(r'Call-ID: (.+?)\s')
 
 class Packet(object):
     __slots__ = (
@@ -124,6 +124,7 @@ class Packet(object):
         
         payload_string = payload.decode('utf-8', 'replace')
         if sip_re.search(payload_string):
+            print(payload_string)
             sip_info, cseq_method, call_id,  rtp_port, rtcp_port = self.parse_sip(payload_string)
             self.fields.update(proto_info = 'sip')
             self.fields.update(sip_info = sip_info)

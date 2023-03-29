@@ -2,12 +2,12 @@ from packet import Packet
 from enum import Enum
 
 class State(Enum):
-        HANDLING_SIP_INVITE = 'handling_sip_invite'
-        HANDLING_SIP_200_OK = 'handling_sip_200_ok'
+        HANDLING_SIP_INVITE    = 'handling_sip_invite'
+        HANDLING_SIP_200_OK    = 'handling_sip_200_ok'
         HANDLING_FIRST_PACKET  = 'handling_first_packet'
         HANDLING_SECOND_PACKET = 'handling_second_packet'
         HANDLING_THIRD_PACKET  = 'handling_third_packet'
-        HANDLING_SIP_BYE = 'handling_sip_bye'
+        HANDLING_SIP_BYE       = 'handling_sip_bye'
 
 class PacketHandler(object):
     __slots__ = (

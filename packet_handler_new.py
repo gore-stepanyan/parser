@@ -94,6 +94,7 @@ class PacketHandler(object):
                 
     def handle_sip_200_ok(self, packet):
         if 'sip_info' in packet.fields:
+            # баг 200 Ок ОК
             if packet.fields['sip_info'] == '200 Ok' and self.session_info['call_id'] == packet.fields['call_id']:
                 self.session_info.update(rtp_ports = packet.rtp_ports)
                 self.session_info.update(rtcp_ports = packet.rtcp_ports)

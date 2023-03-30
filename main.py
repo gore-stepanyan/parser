@@ -6,12 +6,12 @@ import time
 def main():
     packetHandler = PacketHandler()
     packet = Packet()
-    capture = pyshark.FileCapture(input_file='pcap_session.pcap', display_filter='', use_json=True, include_raw=True)
+    capture = pyshark.FileCapture(input_file='long.pcap', display_filter='', use_json=True, include_raw=True)
     for p in capture:
         packet.read(p.get_raw_packet())
-        packetHandler.on_packet_arrive(packet)
+        #packetHandler.on_packet_arrive(packet)
         #print("\033c", end='')
-        print(packet.fields)
+        #print(packet.fields)
         #input()
         
 main()

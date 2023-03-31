@@ -117,10 +117,11 @@ class Packet(object):
         if ip_proto == '17':    
             src_port, dst_port, payload = self.read_udp_header(ip_payload)
         else:
-            src_port, dst_port, payload = self.read_tcp_header(ip_payload)
-        
+            return
+            # src_port, dst_port, payload = self.read_tcp_header(ip_payload)
         self.fields.update(src_port = src_port)
         self.fields.update(dst_port = dst_port)
+        
         
         payload_string = payload.decode('utf-8', 'replace')
         if sip_re.search(payload_string):
@@ -139,7 +140,7 @@ class Packet(object):
             if rtcp_port and rtcp_port not in self.rtcp_ports:
                 self.rtcp_ports.append(rtcp_port)
 
-            print(self.fields)    
+            #print(self.fields)    
 
         # нужны ртсп пакеты не короче 44 байт
         if (src_port in self.rtcp_ports or dst_port in self.rtcp_ports) and len(payload) >= 52:
@@ -148,3 +149,7 @@ class Packet(object):
             self.fields.update(ts_msw = ts_msw)
             self.fields.update(ts_lsw = ts_lsw)
             self.fields.update(dlsr = dlsr)
+
+            #print(self.fields)    
+
+            

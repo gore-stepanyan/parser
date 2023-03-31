@@ -89,13 +89,15 @@ class PacketHandler(object):
     def handle_sip_invite(self, packet):
         if 'sip_info' in packet.fields:
             if packet.fields['sip_info'] == 'INVITE':
+                print(self.state)
                 self.session_info.update(call_id = packet.fields['call_id'])
                 self.state = State.HANDLING_SIP_200_OK
                 
     def handle_sip_200_ok(self, packet):
         if 'sip_info' in packet.fields:
             # баг 200 Ок ОК
-            if packet.fields['sip_info'] == '200 Ok' and self.session_info['call_id'] == packet.fields['call_id']:
+            if packet.fields['sip_info'] == '200 OK' and self.session_info['call_id'] == packet.fields['call_id']:
+                print(self.state)
                 self.session_info.update(rtp_ports = packet.rtp_ports)
                 self.session_info.update(rtcp_ports = packet.rtcp_ports)
                 self.state = State.HANDLING_FIRST_PACKET
@@ -109,7 +111,8 @@ class PacketHandler(object):
     def handle_first_packet(self, packet):
         if self.is_session_end(packet):
             print('конец сессии')
-            exit()
+            self.state = State.HANDLING_SIP_INVITE
+            #exit()
 
         if 'proto_info' in packet.fields:
             if packet.fields['proto_info'] == 'rtcp':
@@ -120,13 +123,14 @@ class PacketHandler(object):
                 TS_1 = ts_msw + ts_lsw
 
                 self.data.update(TS_1 = TS_1)
-                #print(self.state)
+                print(self.state)
                 self.state = State.HANDLING_SECOND_PACKET
 
     def handle_second_packet(self, packet):
         if self.is_session_end(packet):
             print('конец сессии')
-            exit()
+            self.state = State.HANDLING_SIP_INVITE
+            #exit()
 
         if 'proto_info' in packet.fields:
             if packet.fields['proto_info'] == 'rtcp':
@@ -135,13 +139,14 @@ class PacketHandler(object):
 
                     DLSR_1 = float(packet.fields['dlsr']) / 65536 #2^16
                     self.data.update(DLSR_1 = DLSR_1)
-                    #print(self.state)
+                    print(self.state)
                     self.state = State.HANDLING_THIRD_PACKET
 
     def handle_third_packet(self, packet):
         if self.is_session_end(packet):
             print('конец сессии')
-            exit()
+            self.state = State.HANDLING_SIP_INVITE
+            #exit()
 
         if 'proto_info' in packet.fields:
             if packet.fields['proto_info'] == 'rtcp':
@@ -155,7 +160,7 @@ class PacketHandler(object):
                     self.data.update(TS_2 = TS_2)
                     self.data.update(DLSR_2 = DLSR_2)
 
-                    #print(self.state)
+                    print(self.state)
                     self.state = State.HANDLING_FIRST_PACKET
 
                     self.compute()

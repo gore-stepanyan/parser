@@ -9,6 +9,7 @@ def main():
     while True:
         raw_data, addr = connection.recvfrom(65536)
         packet.read(raw_data)
+        #print(packet.fields)
         packetHandler.on_packet_arrive(packet)
 
 main()

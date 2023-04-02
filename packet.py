@@ -94,6 +94,10 @@ class Packet(object):
     def read_rtcp_packet(self, data):
         ts_msw, ts_lsw, dlsr = struct.unpack('! 8x I I 32x I', data[:52])
         return ts_msw, ts_lsw, dlsr
+    
+    def read_rtp_header(self, data):
+        p_type, seq_num, ts, ssrc = struct.unpack('! x 1b H I I', data[:12])
+        return p_type & 0b01111111, seq_num, ts, ssrc 
 
     def read(self, data):
         self.fields.clear() # обновим поля
@@ -142,7 +146,7 @@ class Packet(object):
 
             #print(self.fields)    
 
-        # нужны ртсп пакеты не короче 44 байт
+        # нужны ртсп пакеты не короче 52 байт
         if (src_port in self.rtcp_ports or dst_port in self.rtcp_ports) and len(payload) >= 52:
             ts_msw, ts_lsw, dlsr = self.read_rtcp_packet(payload)
             self.fields.update(proto_info = 'rtcp')
@@ -150,6 +154,14 @@ class Packet(object):
             self.fields.update(ts_lsw = ts_lsw)
             self.fields.update(dlsr = dlsr)
 
-            #print(self.fields)    
+            #print(self.fields)
+        
+        if (src_port in self.rtp_ports or dst_port in self.rtp_ports) and len(payload) > 62:
+            p_type, seq_num, ts, ssrc = self.read_rtp_header(payload)
+            self.fields.update(proto_info = 'rtp')
+            self.fields.update(p_type = p_type)
+            self.fields.update(seq_num = seq_num)
+            self.fields.update(ts = ts)
+            self.fields.update(ssrc = ssrc)
 
             

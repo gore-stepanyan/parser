@@ -9,7 +9,8 @@ def main():
     capture = pyshark.FileCapture(input_file='long.pcap', display_filter='', use_json=True, include_raw=True)
     for p in capture:
         packet.read(p.get_raw_packet())
-        #packetHandler.on_packet_arrive(packet)
+        packet.fields.update(sniff_timestamp = p.sniff_timestamp)
+        packetHandler.on_packet_arrive(packet)
         #print("\033c", end='')
         #print(packet.fields)
         #input()

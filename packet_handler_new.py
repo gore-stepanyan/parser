@@ -1,6 +1,7 @@
 from packet import Packet
 from enum import Enum
 
+
 class State(Enum):
         HANDLING_SIP_INVITE    = 'handling_sip_invite'
         HANDLING_SIP_200_OK    = 'handling_sip_200_ok'
@@ -15,11 +16,13 @@ class PacketHandler(object):
         'packet_cache',
         'session_info',
         'fabric', 
-        'state'
+        'state',
+        'rtcp_flow_1',
+        'rtcp_flow_2'
     )
 
     def __init__(self):
-        self.data = {
+        self.data = {            
             'TS_1'        : float,
             'TS_2'        : float,
             'DLSR_1'      : float,
@@ -46,6 +49,18 @@ class PacketHandler(object):
         self.packet_cache = {
             'ip_src'   : None,
             'src_port' : None
+        }
+
+        self.rtcp_flow_1 = {
+            'S_ij' : [],
+            'R_ij' : [],
+            'J'    : 0
+        }
+
+        self.rtcp_flow_2 = {
+            'S_ij' : [],
+            'R_ij' : [],
+            'J'    : 0
         }
 
         self.state = State.HANDLING_SIP_INVITE
@@ -82,14 +97,31 @@ class PacketHandler(object):
         # print(self.data['TS_2'])
         # print(self.data['DLSR_1'])
         # print(self.data['DLSR_2'])
-        print(f'{TS_2:.3f} - {DLSR_2:.3f} - {DLSR_1:.3f} - {TS_1:.3f}')
-        print(f'{(RTD_current / 2):.3f}', f'{RTD_average:.3f}',  '\n')
+        #print(f'{TS_2:.3f} - {DLSR_2:.3f} - {DLSR_1:.3f} - {TS_1:.3f}')
+        #print(f'{(RTD_current / 2):.3f}', f'{RTD_average:.3f}',  '\n')
         #print(RTD_average)
+
+    def compute_jitter(self, rtcp_flow):
+        S_i = float(rtcp_flow['S_ij'][0])
+        S_j = float(rtcp_flow['S_ij'][1])
+        R_i = float(rtcp_flow['R_ij'][0])
+        R_j = float(rtcp_flow['R_ij'][1])
+        J = rtcp_flow['J']
+        D_ij = (R_j - R_i) - (S_j - S_i) / 8000
+        J = J + (abs(D_ij) - J) / 16
+        
+        # print(self.data['S_ij'])
+        # print(self.data['R_ij'])
+
+        rtcp_flow.update(J = J)
+        rtcp_flow['S_ij'].pop(0)
+        rtcp_flow['R_ij'].pop(0)
+            
 
     def handle_sip_invite(self, packet):
         if 'sip_info' in packet.fields:
             if packet.fields['sip_info'] == 'INVITE':
-                print(self.state)
+                #print(self.state)
                 self.session_info.update(call_id = packet.fields['call_id'])
                 self.state = State.HANDLING_SIP_200_OK
                 
@@ -97,7 +129,7 @@ class PacketHandler(object):
         if 'sip_info' in packet.fields:
             # баг 200 Ок ОК
             if packet.fields['sip_info'] == '200 OK' and self.session_info['call_id'] == packet.fields['call_id']:
-                print(self.state)
+                # print(self.state)
                 self.session_info.update(rtp_ports = packet.rtp_ports)
                 self.session_info.update(rtcp_ports = packet.rtcp_ports)
                 self.state = State.HANDLING_FIRST_PACKET
@@ -123,8 +155,17 @@ class PacketHandler(object):
                 TS_1 = ts_msw + ts_lsw
 
                 self.data.update(TS_1 = TS_1)
-                print(self.state)
+                # print(self.state)
                 self.state = State.HANDLING_SECOND_PACKET
+                
+                # все пакеты RTCP1 образуют поток пакетов сендера rtcp_flow_1 для которых рассчитывается джиттер:
+                S = packet.fields['ts_rtp']
+                self.rtcp_flow_1['S_ij'].append(S)
+                R = packet.fields['sniff_timestamp']
+                self.rtcp_flow_1['R_ij'].append(R)
+                if len(self.rtcp_flow_1['S_ij']) == 2 and len(self.rtcp_flow_1['R_ij']) == 2:
+                    self.compute_jitter(self.rtcp_flow_1)
+                    pass
 
     def handle_second_packet(self, packet):
         if self.is_session_end(packet):
@@ -139,8 +180,16 @@ class PacketHandler(object):
 
                     DLSR_1 = float(packet.fields['dlsr']) / 65536 #2^16
                     self.data.update(DLSR_1 = DLSR_1)
-                    print(self.state)
+                    # print(self.state)
                     self.state = State.HANDLING_THIRD_PACKET
+
+                    # все пакеты RTCP2 образуют поток пакетов сендера rtcp_flow_2 для которых рассчитывается джиттер:
+                    S = packet.fields['ts_rtp']
+                    self.rtcp_flow_2['S_ij'].append(S)
+                    R = packet.fields['sniff_timestamp']
+                    self.rtcp_flow_2['R_ij'].append(R)
+                    if len(self.rtcp_flow_2['S_ij']) == 2 and len(self.rtcp_flow_2['R_ij']) == 2:
+                        self.compute_jitter(self.rtcp_flow_2)
 
     def handle_third_packet(self, packet):
         if self.is_session_end(packet):
@@ -160,10 +209,13 @@ class PacketHandler(object):
                     self.data.update(TS_2 = TS_2)
                     self.data.update(DLSR_2 = DLSR_2)
 
-                    print(self.state)
-                    self.state = State.HANDLING_FIRST_PACKET
+                    # print(self.state)
+                    #self.state = State.HANDLING_FIRST_PACKET # можно убрать
 
                     self.compute()
+                    
+                    # представим что RTCP3 это очередной RTCP1:
+                    self.handle_first_packet(packet)
 
     def on_packet_arrive(self, packet):
         #print(self.state)

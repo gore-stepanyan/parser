@@ -52,15 +52,17 @@ class PacketHandler(object):
         }
 
         self.rtcp_flow_1 = {
-            'S_ij' : [],
-            'R_ij' : [],
-            'J'    : 0
+            'S_ij'    : [],
+            'R_ij'    : [],
+            'J'       : 0,
+            'R_factor': float
         }
 
         self.rtcp_flow_2 = {
-            'S_ij' : [],
-            'R_ij' : [],
-            'J'    : 0
+            'S_ij'    : [],
+            'R_ij'    : [],
+            'J'       : 0,
+            'R_factor': float
         }
 
         self.state = State.HANDLING_SIP_INVITE
@@ -80,8 +82,15 @@ class PacketHandler(object):
     def is_session_end(self, packet):
         if 'sip_info' in packet.fields:
             return packet.fields['sip_info'] == 'BYE'
+        
+    def print_metrics(self, rtcp_flow):
+        d = self.data['RTD_average'] * 1000
+        J = rtcp_flow['J'] * 1000
+        R = rtcp_flow['R_factor']
 
-    def compute(self):
+        print(f'{d:.3f}', f'{J:.3f}', f'{R:.0f}')
+
+    def compute_delay(self):
         TS_1 = self.data['TS_1']
         TS_2 = self.data['TS_2']
         DLSR_1 = self.data['DLSR_1']
@@ -97,9 +106,9 @@ class PacketHandler(object):
         # print(self.data['TS_2'])
         # print(self.data['DLSR_1'])
         # print(self.data['DLSR_2'])
-        #print(f'{TS_2:.3f} - {DLSR_2:.3f} - {DLSR_1:.3f} - {TS_1:.3f}')
-        #print(f'{(RTD_current / 2):.3f}', f'{RTD_average:.3f}',  '\n')
-        #print(RTD_average)
+        # print(f'{TS_2:.3f} - {DLSR_2:.3f} - {DLSR_1:.3f} - {TS_1:.3f}')
+        # print(f'{(RTD_current / 2):.3f}', f'{RTD_average:.3f}',  '\n')
+        # print(RTD_average)
 
     def compute_jitter(self, rtcp_flow):
         S_i = float(rtcp_flow['S_ij'][0])
@@ -116,8 +125,30 @@ class PacketHandler(object):
         rtcp_flow.update(J = J)
         rtcp_flow['S_ij'].pop(0)
         rtcp_flow['R_ij'].pop(0)
-            
 
+    def compute_r_factor(self, rtcp_flow):
+        #осталось узнать пэйлоад тайп и узнать коэффициенты по табличкам
+        I_e = 0
+        B_pl = 4.3
+        P_pl = 0
+        buffer = 20 # 20 мс например
+
+
+        J = rtcp_flow['J'] * 1000 # ms
+        d = self.data['RTD_average'] * 1000 # ms
+        # в первоисточнике есть ограничения 175 - 400 мс
+        I_d = 0.0267 * d if d <= 175 else 0.1194 * d - 15.876
+        P_jitter = pow(1 + -0.1 * buffer / J, 20) / 2
+        P_plef = P_pl + P_jitter - P_pl * P_jitter
+        I_e_eff = I_e + (95 - I_e) * P_plef / (P_plef + B_pl)
+        R_factor = 93.2 - I_d - I_e_eff
+
+        rtcp_flow.update(R_factor = R_factor)
+        
+        #print(I_d, I_e_eff)
+        self.print_metrics(rtcp_flow)
+        #print('')
+            
     def handle_sip_invite(self, packet):
         if 'sip_info' in packet.fields:
             if packet.fields['sip_info'] == 'INVITE':
@@ -165,7 +196,7 @@ class PacketHandler(object):
                 self.rtcp_flow_1['R_ij'].append(R)
                 if len(self.rtcp_flow_1['S_ij']) == 2 and len(self.rtcp_flow_1['R_ij']) == 2:
                     self.compute_jitter(self.rtcp_flow_1)
-                    pass
+                    self.compute_r_factor(self.rtcp_flow_1)
 
     def handle_second_packet(self, packet):
         if self.is_session_end(packet):
@@ -190,6 +221,7 @@ class PacketHandler(object):
                     self.rtcp_flow_2['R_ij'].append(R)
                     if len(self.rtcp_flow_2['S_ij']) == 2 and len(self.rtcp_flow_2['R_ij']) == 2:
                         self.compute_jitter(self.rtcp_flow_2)
+                        self.compute_r_factor(self.rtcp_flow_2)
 
     def handle_third_packet(self, packet):
         if self.is_session_end(packet):
@@ -212,7 +244,7 @@ class PacketHandler(object):
                     # print(self.state)
                     #self.state = State.HANDLING_FIRST_PACKET # можно убрать
 
-                    self.compute()
+                    self.compute_delay()
                     
                     # представим что RTCP3 это очередной RTCP1:
                     self.handle_first_packet(packet)

@@ -1,6 +1,6 @@
 import pyshark
 from packet import Packet
-from packet_handler_new import PacketHandler
+from packet_handler_rtp import PacketHandler
 import time
 
 def main():

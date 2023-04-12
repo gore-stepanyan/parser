@@ -78,11 +78,11 @@ class PacketHandler(object):
             return packet.fields['sip_info'] == 'BYE'
         
     def print_metrics(self, rtp_flow):
-        if rtp_flow['ip_src'] == '192.168.43.236':
+        if rtp_flow['ip_src'] == '192.168.43.106':
             return
 
-        d = rtp_flow['d'] * 1000
-        J = rtp_flow['J'] * 1000
+        d = rtp_flow['d']
+        J = rtp_flow['J']
         R = rtp_flow['R_factor']
         ip_src = rtp_flow['ip_src']
 
@@ -90,16 +90,16 @@ class PacketHandler(object):
         logging.info((ip_src, f'{d:.3f}', f'{J:.3f}', f'{R:.3f}'))
 
     def compute_jitter(self, rtp_flow, packet):
-        S = packet.fields['ts']
+        S = packet.fields['ts'] * 1000 # ms
         rtp_flow['S_ij'].append(S)
-        R = packet.fields['sniff_timestamp']
+        R = float(packet.fields['sniff_timestamp']) * 1000 # ms
         rtp_flow['R_ij'].append(R)
 
         if len(rtp_flow['S_ij']) == 2 and len(rtp_flow['R_ij']) == 2:
-            S_i = float(rtp_flow['S_ij'][0])
-            S_j = float(rtp_flow['S_ij'][1])
-            R_i = float(rtp_flow['R_ij'][0])
-            R_j = float(rtp_flow['R_ij'][1])
+            S_i = rtp_flow['S_ij'][0]
+            S_j = rtp_flow['S_ij'][1]
+            R_i = rtp_flow['R_ij'][0]
+            R_j = rtp_flow['R_ij'][1]
             J = rtp_flow['J']
             d = rtp_flow['d']
             i = rtp_flow['i']
@@ -125,8 +125,8 @@ class PacketHandler(object):
         buffer = 20 # 20 мс например
 
 
-        J = rtp_flow['J'] * 1000 # ms
-        d = rtp_flow['d'] * 1000 # ms
+        J = rtp_flow['J']
+        d = rtp_flow['d']
         # в первоисточнике есть ограничения 175 - 400 мс
         I_d = 0.0267 * d if d <= 175 else 0.1194 * d - 15.876
         P_jitter = pow(1 + -0.1 * buffer / J, 20) / 2
@@ -136,7 +136,6 @@ class PacketHandler(object):
 
         rtp_flow.update(R_factor = R_factor)
         
-        #print(I_d, I_e_eff)
         self.print_metrics(rtp_flow)
         #print('')
             

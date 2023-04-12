@@ -97,7 +97,7 @@ class Packet(object):
     
     def read_rtp_header(self, data):
         p_type, seq_num, ts, ssrc = struct.unpack('! x 1b H I I', data[:12])
-        return p_type & 0b01111111, seq_num, ts, ssrc 
+        return p_type & 0b01111111, seq_num, ts, ssrc  # мс
 
     def read(self, data):
         self.fields.clear() # обновим поля

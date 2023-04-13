@@ -19,6 +19,10 @@ class RTPFlow(object):
     )
 
     def __init__(self):
+        self.ip_src = ''
+        self.src_port = ''
+        self.ip_dst = ''
+        self.dst_port = ''
         self.S_ij = []
         self.R_ij = []
         self.J = 0
@@ -175,7 +179,7 @@ class PacketHandler(object):
 
         rtp_flow.R_factor = R_factor
         
-        self.print_metrics()
+        #self.print_metrics()
         #print('')
             
     def handle_sip_invite(self, packet: Packet):

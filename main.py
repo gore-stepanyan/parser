@@ -13,7 +13,7 @@ def sniff():
     
     for subcapture in zip(capture1, capture2):
         for packet in subcapture:
-            sleep(0.01)
+            #sleep(0.01)
             yield packet
 
 def main():
@@ -23,12 +23,14 @@ def main():
     handlers.append(PacketHandler())
     
     for p in sniff():
-        #print("\033c", end='')
+        print("\033c", end='')
         packet.read(p.get_raw_packet())
         packet.fields.update(sniff_timestamp = (p.sniff_timestamp))         
         
+        #sleep(0.01)
         for handler in handlers:
             handler.on_packet_arrive(packet)
+            handler.print_metrics()
         
         busy_count = 0
         for handler in handlers:

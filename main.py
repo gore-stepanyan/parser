@@ -15,19 +15,24 @@ def sniff():
             yield packet
 
 def main():
-    busy_count = 0
     packet = Packet()
     handlers.append(PacketHandler())
     
     for p in sniff():
         print("\033c", end='')
+        start = time()
         packet.read(p.get_raw_packet())
+        print(time() - start, 'time to read')
         packet.fields.update(sniff_timestamp = (p.sniff_timestamp))         
         
         #sleep(0.01)
         for handler in handlers:
+            start = time()
             handler.on_packet_arrive(packet)
-            handler.print_metrics()
+            print(time() - start, 'time to handle')
+            if handler.state == State.HANDLING_RTP_FLOW:
+                #handler.print_metrics()
+                pass
         
         busy_count = 0
         for handler in handlers:
@@ -42,10 +47,6 @@ def main():
                 if handler.state == State.HANDLING_SIP_INVITE:
                     handlers.remove(handler)
                     break
-
-        
-
-
 
         #print(packet.fields)
         #input()

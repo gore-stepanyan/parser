@@ -1,7 +1,8 @@
 INVITE sip:Nokia@192.168.43.58 SIP/2.0..
 Via: SIP/2.0/UDP 192.168.43.236:5060;branch=z9hG4bK.bwnakQ5Yt;rport..
 From: "Andrei" <sip:Andrei@192.168.43.236>;tag=IFiB4IJoN..
-To: sip:Nokia@192.168.43.58..CSeq: 20 INVITE..
+To: sip:Nokia@192.168.43.58..
+CSeq: 20 INVITE..
 Call-ID: xGYHcL0tNy..
 Max-Forwards: 70..
 Supported: replaces, outbound, gruu..

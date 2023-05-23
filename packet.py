@@ -35,7 +35,7 @@ class Packet(object):
     def read_eth_header(self, data):
         # читаем первые 6 + 6 + 2 = 14 байт, H - short uint - два байта
         eth_dst, eth_src, eth_type = struct.unpack('! 6s 6s H', data[:14])
-        #всратое форматирование 0x 4 символва для 0 -> 0x0800
+        #форматирование 0x + 4 символва для 0 -> 0x0800
         return self.get_hr_mac(eth_dst), self.get_hr_mac(eth_src), '0x%04x' % eth_type, data[14:]
 
     def read_ipv4_header(self, data):

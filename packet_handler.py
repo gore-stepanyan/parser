@@ -15,6 +15,8 @@ class RTPFlow(object):
         'J',
         'd',
         'i',
+        'P_pl',
+        'prev_seq_num',
         'R_factor'
     )
 
@@ -28,6 +30,8 @@ class RTPFlow(object):
         self.J = 0
         self.d = 0
         self.i = 0
+        self.P_pl = 0.0
+        self.prev_seq_num = 0
         self.R_factor = 0
 
 class Session(object):
@@ -128,8 +132,9 @@ class PacketHandler(object):
             #if ip_src == '192.168.43.173':
             d = rtp_flow.d
             J = rtp_flow.J
+            P_pl = rtp_flow.P_pl
             R = rtp_flow.R_factor
-            print(f'{ip_src}:{src_port}', '->', f'{ip_dst}:{dst_port}', f'{d:.3f}', f'{J:.3f}', f'{R:.3f}')
+            print(f'{ip_src}:{src_port}', '->', f'{ip_dst}:{dst_port}', f'{d:.3f}', f'{J:.3f}', f'{P_pl:.2f}', f'{R:.3f}')
             #logging.info((ip_src, '->', ip_dst, f'{d:.3f}', f'{J:.3f}', f'{R:.3f}'))
 
     def compute_jitter(self, rtp_flow: RTPFlow, packet: Packet):
@@ -137,7 +142,7 @@ class PacketHandler(object):
         rtp_flow.S_ij.append(S)
         R = float(packet.fields['sniff_timestamp']) * 1000 # ms
         rtp_flow.R_ij.append(R)
-
+        
         if len(rtp_flow.S_ij) == 2 and len(rtp_flow.R_ij) == 2:
             S_i = rtp_flow.S_ij[0]
             S_j = rtp_flow.S_ij[1]
@@ -157,8 +162,12 @@ class PacketHandler(object):
             rtp_flow.S_ij.pop(0)
             rtp_flow.R_ij.pop(0)
 
+            P_pl = (packet.fields['seq_num'] - rtp_flow.prev_seq_num - 1) / (i + 1)
+            rtp_flow.P_pl = P_pl
 
             self.compute_r_factor(rtp_flow)
+        
+        rtp_flow.prev_seq_num = packet.fields['seq_num']
 
     def compute_r_factor(self, rtp_flow: RTPFlow):
         #осталось узнать пэйлоад тайп и узнать коэффициенты по табличкам

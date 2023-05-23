@@ -15,6 +15,7 @@ class RTPFlow(object):
         'J',
         'd',
         'i',
+        'loss',
         'P_pl',
         'prev_seq_num',
         'R_factor'
@@ -30,6 +31,7 @@ class RTPFlow(object):
         self.J = 0
         self.d = 0
         self.i = 0
+        self.loss = 0
         self.P_pl = 0.0
         self.prev_seq_num = 0
         self.R_factor = 0
@@ -132,9 +134,20 @@ class PacketHandler(object):
             #if ip_src == '192.168.43.173':
             d = rtp_flow.d
             J = rtp_flow.J
+            loss = rtp_flow.loss
             P_pl = rtp_flow.P_pl
+            i = rtp_flow.i
             R = rtp_flow.R_factor
-            print(f'{ip_src}:{src_port}', '->', f'{ip_dst}:{dst_port}', f'{d:.3f}', f'{J:.3f}', f'{P_pl:.2f}', f'{R:.3f}')
+            print(
+                f'{ip_src}:{src_port}', '->', 
+                f'{ip_dst}:{dst_port}', 
+                f'{d:.3f}', 
+                f'{J:.3f}',
+                f'{i}',
+                f'{loss}',
+                f'{P_pl:.2f}%',
+                f'{R:.3f}'
+            )
             #logging.info((ip_src, '->', ip_dst, f'{d:.3f}', f'{J:.3f}', f'{R:.3f}'))
 
     def compute_jitter(self, rtp_flow: RTPFlow, packet: Packet):
@@ -162,8 +175,11 @@ class PacketHandler(object):
             rtp_flow.S_ij.pop(0)
             rtp_flow.R_ij.pop(0)
 
-            P_pl = (packet.fields['seq_num'] - rtp_flow.prev_seq_num - 1) / (i + 1)
+            loss = rtp_flow.loss
+            loss = loss + packet.fields['seq_num'] - rtp_flow.prev_seq_num - 1
+            P_pl = loss / (i + 1) * 100
             rtp_flow.P_pl = P_pl
+            rtp_flow.loss = loss
 
             self.compute_r_factor(rtp_flow)
         
@@ -173,7 +189,7 @@ class PacketHandler(object):
         #осталось узнать пэйлоад тайп и узнать коэффициенты по табличкам
         I_e = 0
         B_pl = 4.3
-        P_pl = 0
+        P_pl = rtp_flow.P_pl
         buffer = 20 # 20 мс например
 
 

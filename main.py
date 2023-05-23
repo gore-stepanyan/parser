@@ -5,6 +5,7 @@ from time import time, sleep
 
 handlers = []
 
+
 def sniff():
     capture1 = pyshark.FileCapture(input_file='packet_loss.pcap', display_filter='', use_json=True, include_raw=True)
     #capture2 = pyshark.FileCapture(input_file='short.pcap', display_filter='', use_json=True, include_raw=True)
@@ -14,19 +15,21 @@ def sniff():
     #         #sleep(0.01)
     #         yield packet
     for packet in capture1:
-        yield packet
+        yield packet            
+        
+        
 
 def main():
     packet = Packet()
     handlers.append(PacketHandler())
-    
+
     for p in sniff():
-        print("\033c", end='')
+        #print("\033c", end='')
         #start = time()
         packet.read(p.get_raw_packet())
         #print(time() - start, 'time to read')
         packet.fields.update(sniff_timestamp = (p.sniff_timestamp))         
-        
+
         #sleep(0.01)
         for handler in handlers:
             #start = time()

@@ -23,7 +23,7 @@ def main():
     packet = Packet()
     handlers.append(PacketHandler())
 
-    for p in sniff():
+    for p in sniff():                                   
         #print("\033c", end='')
         #start = time()
         packet.read(p.get_raw_packet())

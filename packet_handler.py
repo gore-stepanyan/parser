@@ -1,5 +1,6 @@
 from packet import Packet
 from enum import Enum
+from typing import List
 import logging
 
 #logging.basicConfig(filename='output.txt', level=logging.DEBUG, format='')
@@ -36,15 +37,6 @@ class RTPFlow(object):
         self.prev_seq_num = 0
         self.R_factor = 0
 
-class Session(object):
-    __slots__ = (
-        'call_id',
-        'rtp_flows',
-    )
-    
-    def __init__(self):
-        self.rtp_flows = []
-
 class State(Enum):
         HANDLING_SIP_INVITE = 'handling_sip_invite'
         HANDLING_SIP_200_OK = 'handling_sip_200_ok'
@@ -58,8 +50,6 @@ class PacketHandler(object):
         'session_info',
         'fabric', 
         'state',
-        'rtp_flow_1',
-        'rtp_flow_2',
         'rtp_flows',
         'sessions'
     )
@@ -87,40 +77,12 @@ class PacketHandler(object):
             'call_id'       : None
         }
 
-        self.sessions = []
-        self.rtp_flows = []
-
-        self.rtp_flow_1 = {
-            'ip_src'        : None,
-            'src_port'      : None,
-            'ip_dst'        : None,
-            'dst_port'      : None,
-            'S_ij'          : [],
-            'R_ij'          : [],
-            'J'             : 0,
-            'd'             : 0,
-            'i'             : 0,
-            'R_factor'      : float
-        }   
-
-        self.rtp_flow_2 = {
-            'ip_src'        : None,
-            'src_port'      : None,
-            'ip_dst'        : None,
-            'dst_port'      : None,
-            'S_ij'          : [],
-            'R_ij'          : [],
-            'J'             : 0,
-            'd'             : 0,
-            'i'             : 0,
-            'R_factor'      : float
-        }
-
+        self.rtp_flows:List[RTPFlow] = []
         self.state = State.HANDLING_SIP_INVITE
     
-    def is_session_end(self, packet):
+    def is_session_end(self, packet: Packet):
         if 'sip_info' in packet.fields:
-            return packet.fields['sip_info'] == 'BYE'
+            return packet.fields['sip_info'] == 'BYE' and self.session_info['call_id'] == packet.fields['call_id']
         
     def print_metrics(self):
         call_id = self.session_info['call_id']
@@ -139,6 +101,7 @@ class PacketHandler(object):
             i = rtp_flow.i
             R = rtp_flow.R_factor
             print(
+                '\t',
                 f'{ip_src}:{src_port}', '->', 
                 f'{ip_dst}:{dst_port}', 
                 f'{d:.3f}', 
@@ -247,7 +210,7 @@ class PacketHandler(object):
         if self.is_session_end(packet):
             print('конец сессии')
             self.state = State.HANDLING_SIP_INVITE
-            #exit()
+            return
 
         if 'proto_info' in packet.fields:
             if packet.fields['proto_info'] == 'rtp':

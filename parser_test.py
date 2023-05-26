@@ -1,5 +1,5 @@
 import pyshark
-from packet import Packet
+from packet_parser import Packet
 
 in_mem_capture = pyshark.InMemCapture()
 

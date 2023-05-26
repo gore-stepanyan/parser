@@ -1,4 +1,4 @@
-from packet import Packet
+from packet_parser import Packet
 from enum import Enum
 import logging
 

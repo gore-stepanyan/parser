@@ -1,5 +1,5 @@
 import pyshark
-from packet import Packet
+from packet_parser import PacketParser
 from packet_handler import PacketHandler, State, RTPFlow
 from time import time, sleep
 from prometheus_client import CollectorRegistry, Gauge, push_to_gateway
@@ -67,23 +67,22 @@ def print_stats():
                 handler.print_metrics()
 
 def start():
-    packet = Packet()
+    parser = PacketParser()
     handlers.append(PacketHandler())
     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
         executor.submit(print_stats)
         executor.submit(push_stats)
         for p in sniff():
             futures = []
-            #print("\033c", end='')
             #start = time()
-            packet.read(p.get_raw_packet())
+            parser.read(p.get_raw_packet())
             #print(time() - start, 'time to read')
-            packet.fields.update(sniff_timestamp = (p.sniff_timestamp))         
+            parser.fields.update(sniff_timestamp = (p.sniff_timestamp))         
 
             #sleep(0.01)
             for handler in handlers:
                 #start = time()
-                futures.append(executor.submit(handler.on_packet_arrive, packet))
+                futures.append(executor.submit(handler.on_packet_arrive, parser.fields))
                 #print(time() - start, 'time to handle')
             
             # синхронизация тредов

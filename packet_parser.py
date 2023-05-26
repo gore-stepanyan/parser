@@ -10,7 +10,7 @@ rtp_port_re = re.compile(r'm=audio (\d+)')
 rtcp_port_re = re.compile(r'a=rtcp:(\d+)')
 call_id_re = re.compile(r'Call-ID: (.+?)\s')
 
-class Packet(object):
+class PacketParser(object):
     __slots__ = (
         'fields',
         'rtp_ports',

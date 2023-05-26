@@ -1,17 +1,17 @@
 from time import time
 import socket
-from packet import Packet
+from packet_parser import PacketParser
 from packet_handler import PacketHandler, State
 
 
-def sniff() -> Packet:
-    packet = Packet()
+def sniff() -> dict:
+    packet = PacketParser()
     connection = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.ntohs(3))
     while True:
         raw_data, addr = connection.recvfrom(65536)
         packet.read(raw_data)
         packet.fields.update(sniff_timestamp = time())
-        yield packet
+        yield packet.fields
 
 def main():
     handlers = []

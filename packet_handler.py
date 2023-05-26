@@ -1,4 +1,4 @@
-from packet import Packet
+from packet_parser import PacketParser
 from enum import Enum
 from typing import List
 import logging
@@ -45,8 +45,6 @@ class State(Enum):
 
 class PacketHandler(object):
     __slots__ = (
-        'data', 
-        'packet_cache',
         'session_info',
         'fabric', 
         'state',
@@ -55,15 +53,6 @@ class PacketHandler(object):
     )
 
     def __init__(self):
-        self.data = {            
-            'TS_1'          : float,
-            'TS_2'          : float,
-            'DLSR_1'        : float,
-            'DLSR_2'        : float,
-            'RTD_array'     : [],
-            'RTD_average'   : float
-        }
-
         self.fabric = {
             State.HANDLING_SIP_INVITE    : self.handle_sip_invite,
             State.HANDLING_SIP_200_OK    : self.handle_sip_200_ok,
@@ -80,9 +69,9 @@ class PacketHandler(object):
         self.rtp_flows:List[RTPFlow] = []
         self.state = State.HANDLING_SIP_INVITE
     
-    def is_session_end(self, packet: Packet):
-        if 'sip_info' in packet.fields:
-            return packet.fields['sip_info'] == 'BYE' and self.session_info['call_id'] == packet.fields['call_id']
+    def is_session_end(self, packet):
+        if 'sip_info' in packet:
+            return packet['sip_info'] == 'BYE' and self.session_info['call_id'] == packet['call_id']
         
     def print_metrics(self):
         call_id = self.session_info['call_id']
@@ -113,10 +102,10 @@ class PacketHandler(object):
             )
             #logging.info((ip_src, '->', ip_dst, f'{d:.3f}', f'{J:.3f}', f'{R:.3f}'))
 
-    def compute_jitter(self, rtp_flow: RTPFlow, packet: Packet):
-        S = packet.fields['ts'] * 1000 # ms
+    def compute_jitter(self, rtp_flow: RTPFlow, packet):
+        S = packet['ts'] * 1000 # ms
         rtp_flow.S_ij.append(S)
-        R = float(packet.fields['sniff_timestamp']) * 1000 # ms
+        R = float(packet['sniff_timestamp']) * 1000 # ms
         rtp_flow.R_ij.append(R)
         
         if len(rtp_flow.S_ij) == 2 and len(rtp_flow.R_ij) == 2:
@@ -139,14 +128,14 @@ class PacketHandler(object):
             rtp_flow.R_ij.pop(0)
 
             loss = rtp_flow.loss
-            loss = loss + packet.fields['seq_num'] - rtp_flow.prev_seq_num - 1
+            loss = loss + packet['seq_num'] - rtp_flow.prev_seq_num - 1
             P_pl = loss / (i + 1) * 100
             rtp_flow.P_pl = P_pl
             rtp_flow.loss = loss
 
             self.compute_r_factor(rtp_flow)
         
-        rtp_flow.prev_seq_num = packet.fields['seq_num']
+        rtp_flow.prev_seq_num = packet['seq_num']
 
     def compute_r_factor(self, rtp_flow: RTPFlow):
         #осталось узнать пэйлоад тайп и узнать коэффициенты по табличкам
@@ -171,31 +160,31 @@ class PacketHandler(object):
         #self.print_metrics()
         #print('')
             
-    def handle_sip_invite(self, packet: Packet):
-        if 'sip_info' in packet.fields:
-            if packet.fields['sip_info'] == 'INVITE':
+    def handle_sip_invite(self, packet):
+        if 'sip_info' in packet:
+            if packet['sip_info'] == 'INVITE':
                 #print(self.state)
-                self.session_info.update(call_id    = packet.fields['call_id'])
+                self.session_info.update(call_id    = packet['call_id'])
                 
                 rtpFlow = RTPFlow()
-                rtpFlow.ip_src       = packet.fields['ip_src']
-                rtpFlow.ip_dst       = packet.fields['ip_dst']
-                rtpFlow.src_port     = packet.fields['rtp_port']
+                rtpFlow.ip_src       = packet['ip_src']
+                rtpFlow.ip_dst       = packet['ip_dst']
+                rtpFlow.src_port     = packet['rtp_port']
                 
                 self.rtp_flows.append(rtpFlow)
                 self.state = State.HANDLING_SIP_200_OK
                 
-    def handle_sip_200_ok(self, packet: Packet):
-        if 'sip_info' in packet.fields:
+    def handle_sip_200_ok(self, packet):
+        if 'sip_info' in packet:
             # баг 200 Ок ОК
-            if packet.fields['sip_info'] == '200 OK' and self.session_info['call_id'] == packet.fields['call_id']:
+            if packet['sip_info'] == '200 OK' and self.session_info['call_id'] == packet['call_id']:
                 # print(self.state)
                 rtpFlow = RTPFlow()
-                rtpFlow.ip_src       = packet.fields['ip_src']
-                rtpFlow.ip_dst       = packet.fields['ip_dst']
-                rtpFlow.src_port     = packet.fields['rtp_port']
+                rtpFlow.ip_src       = packet['ip_src']
+                rtpFlow.ip_dst       = packet['ip_dst']
+                rtpFlow.src_port     = packet['rtp_port']
                 rtpFlow.dst_port     = self.rtp_flows[0].src_port
-                self.rtp_flows[0].dst_port = packet.fields['rtp_port']
+                self.rtp_flows[0].dst_port = packet['rtp_port']
 
                 self.rtp_flows.append(rtpFlow)
                 self.state = State.HANDLING_RTP_FLOW
@@ -206,18 +195,18 @@ class PacketHandler(object):
         # и завершить тред
         pass
 
-    def handle_rtp_flow(self, packet: Packet):
+    def handle_rtp_flow(self, packet):
         if self.is_session_end(packet):
             print('конец сессии')
             self.state = State.HANDLING_SIP_INVITE
             return
 
-        if 'proto_info' in packet.fields:
-            if packet.fields['proto_info'] == 'rtp':
-                if packet.fields['ip_src'] == self.rtp_flows[0].ip_src and packet.fields['src_port'] == self.rtp_flows[0].src_port:
+        if 'proto_info' in packet:
+            if packet['proto_info'] == 'rtp':
+                if packet['ip_src'] == self.rtp_flows[0].ip_src and packet['src_port'] == self.rtp_flows[0].src_port:
                     self.compute_jitter(self.rtp_flows[0], packet)
                 
-                if packet.fields['ip_src'] == self.rtp_flows[1].ip_src and packet.fields['src_port'] == self.rtp_flows[1].src_port:
+                if packet['ip_src'] == self.rtp_flows[1].ip_src and packet['src_port'] == self.rtp_flows[1].src_port:
                     self.compute_jitter(self.rtp_flows[1], packet)
 
     def on_packet_arrive(self, packet):

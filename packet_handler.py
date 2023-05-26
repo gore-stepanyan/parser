@@ -53,7 +53,6 @@ class PacketHandler(object):
         'fabric', 
         'state',
         'rtp_flows',
-        'sessions'
     )
 
     def __init__(self):
@@ -150,7 +149,6 @@ class PacketHandler(object):
         P_pl = rtp_flow.P_pl
         buffer = 20 # 20 мс например
 
-
         J = rtp_flow.J
         d = rtp_flow.d
         # в первоисточнике есть ограничения 175 - 400 мс
@@ -163,8 +161,7 @@ class PacketHandler(object):
         
         rtp_flow.R_factor = R_factor
         rtp_flow.MOS = MOS
-    
-        
+         
         #self.print_metrics()
         #print('')
 

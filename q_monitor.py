@@ -49,6 +49,10 @@ class QMonitor(object):
                         # регистр метрик
                         registry = CollectorRegistry()
 
+                        MOS = Gauge('MOS', 'computed from R-factor', registry=registry)
+                        MOS.set_to_current_time()
+                        MOS.set(rtp_flow.MOS)
+
                         R_factor = Gauge('R_factor', 'computed according to e-model', registry=registry)
                         R_factor.set_to_current_time()
                         R_factor.set(rtp_flow.R_factor)

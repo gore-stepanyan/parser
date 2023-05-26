@@ -1,6 +1,7 @@
 import struct
 import re
 
+# регулярные выражения для парсинга сип сообщений
 info_invite_re = re.compile(r'(INVITE) sip:')
 info_200_Ok_re =  re.compile(r'(200 O[Kk])')
 info_bye_re = re.compile(r'(BYE) sip:')
@@ -22,40 +23,44 @@ class PacketParser(object):
         self.rtp_ports = []
         self.rtcp_ports = []
 
-    # хуман редибл мак AA:BB:CC:DD:EE:FF
+    # форматирование мак адреса -> AA:BB:CC:DD:EE:FF
     def get_hr_mac(self, bytes_mac):
         bytes_str = map('{:02x}'.format, bytes_mac)
         return ':'.join(bytes_str).upper()
 
-    # хуман редибл айпи 192.168.0.0
+    # форматирование айпи адреса -> 192.168.0.1
     def get_hr_ipv4(self, bytes_ipv4):
         return '.'.join(map(str, bytes_ipv4))
 
-    # распаковка
+    # чтение езернет заголовков
     def read_eth_header(self, data):
         # читаем первые 6 + 6 + 2 = 14 байт, H - short uint - два байта
         eth_dst, eth_src, eth_type = struct.unpack('! 6s 6s H', data[:14])
         #форматирование 0x + 4 символва для 0 -> 0x0800
         return self.get_hr_mac(eth_dst), self.get_hr_mac(eth_src), '0x%04x' % eth_type, data[14:]
 
+    # чтение ипв4 заголовков
     def read_ipv4_header(self, data):
-        #читаем с девятого байта тип пакета (1 байт)
-        #все интересные пакеты имеют 20 байт в заголовке, 2x - пропуск два байта чексума (ненужен)
-        #по четыре байта на ip адреса
+        # читаем с девятого байта тип пакета (1 байт)
+        # все интересные пакеты имеют 20 байт в заголовке, 2x - пропуск два байта чексума (ненужен)
+        # по четыре байта на ip адреса
         ip_proto, ip_src, ip_dst = struct.unpack('! 1b 2x 4s 4s', data[9:20])
         return str(ip_proto), self.get_hr_ipv4(ip_src), self.get_hr_ipv4(ip_dst), data[20:]
 
+    # чтение удп заголовков
     def read_udp_header(self, data):
         # по два байта на порты, остальное не нужно
         src_port, dst_port = struct.unpack('! H H 4x', data[:8])
         return str(src_port), str(dst_port), data[8:]
     
+    # чтение тсп заголовков
     def read_tcp_header(self, data):
         # по два байта на порты, полбайта на длину заголовка (для нагрузки)
         src_port, dst_port, hdr_len_reserved = struct.unpack('! H H 8x 1s', data[:13])
         hdr_len = int(hdr_len_reserved.hex()[0]) * 4
         return str(src_port), str(dst_port), data[hdr_len:]
-      
+
+    # парсинг сип сообщений с помощью регулярных выражений  
     def parse_sip(self, data):
         if info_invite_re.search(data):
             sip_info = info_invite_re.findall(data)[0]
@@ -90,15 +95,18 @@ class PacketParser(object):
         
         return sip_info, cseq_method, call_id, rtp_port, rtcp_port
 
-    # по четыре байта на таймштампы и дилэй
-    def read_rtcp_packet(self, data):
+    # чтение ртсп заголовков
+    def read_rtcp_header(self, data):
+        # по четыре байта на таймштампы и дилэй
         ts_msw, ts_lsw, ts_rtp, dlsr = struct.unpack('! 8x I I I 28x I', data[:52])
         return ts_msw, ts_lsw, ts_rtp, dlsr
     
+    # чтение ртп заголовков
     def read_rtp_header(self, data):
         p_type, seq_num, ts, ssrc = struct.unpack('! x 1b H I I', data[:12])
         return p_type & 0b01111111, seq_num, ts, ssrc  # мс
 
+    # чтение заголовков и заполнения словаря fields
     def read(self, data):
         self.fields.clear() # обновим поля
 
@@ -122,7 +130,7 @@ class PacketParser(object):
             src_port, dst_port, payload = self.read_udp_header(ip_payload)
         else:
             return
-            # src_port, dst_port, payload = self.read_tcp_header(ip_payload)
+            src_port, dst_port, payload = self.read_tcp_header(ip_payload)
         self.fields.update(src_port = src_port)
         self.fields.update(dst_port = dst_port)
         
@@ -148,7 +156,7 @@ class PacketParser(object):
 
         # нужны ртсп пакеты не короче 52 байт
         if (src_port in self.rtcp_ports or dst_port in self.rtcp_ports) and len(payload) >= 52:
-            ts_msw, ts_lsw, ts_rtp, dlsr = self.read_rtcp_packet(payload)
+            ts_msw, ts_lsw, ts_rtp, dlsr = self.read_rtcp_header(payload)
             self.fields.update(proto_info = 'rtcp')
             self.fields.update(ts_msw = ts_msw)
             self.fields.update(ts_lsw = ts_lsw)
@@ -163,6 +171,4 @@ class PacketParser(object):
             self.fields.update(p_type = p_type)
             self.fields.update(seq_num = seq_num)
             self.fields.update(ts = ts)
-            self.fields.update(ssrc = ssrc)
-
-            
+            self.fields.update(ssrc = ssrc)    

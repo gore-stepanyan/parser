@@ -19,7 +19,8 @@ class RTPFlow(object):
         'loss',
         'P_pl',
         'prev_seq_num',
-        'R_factor'
+        'R_factor',
+        'MOS'
     )
 
     def __init__(self):
@@ -35,13 +36,16 @@ class RTPFlow(object):
         self.loss = 0
         self.P_pl = 0.0
         self.prev_seq_num = 0
-        self.R_factor = 0
+        self.R_factor = 0.0
+        self.MOS = 0.0
+
 
 class State(Enum):
         HANDLING_SIP_INVITE = 'handling_sip_invite'
         HANDLING_SIP_200_OK = 'handling_sip_200_ok'
         HANDLING_RTP_FLOW   = 'handling_rtp_flow'
         HANDLING_SIP_BYE    = 'handling_sip_bye'
+
 
 class PacketHandler(object):
     __slots__ = (
@@ -89,6 +93,7 @@ class PacketHandler(object):
             P_pl = rtp_flow.P_pl
             i = rtp_flow.i
             R = rtp_flow.R_factor
+            MOS = rtp_flow.MOS
             print(
                 '\t',
                 f'{ip_src}:{src_port}', '->', 
@@ -98,7 +103,8 @@ class PacketHandler(object):
                 f'{i}',
                 f'{loss}',
                 f'{P_pl:.2f}%',
-                f'{R:.3f}'
+                f'{R:.2f}',
+                f'{MOS:.2f}'
             )
             #logging.info((ip_src, '->', ip_dst, f'{d:.3f}', f'{J:.3f}', f'{R:.3f}'))
 
@@ -153,13 +159,26 @@ class PacketHandler(object):
         P_plef = P_pl + P_jitter - P_pl * P_jitter
         I_e_eff = I_e + (95 - I_e) * P_plef / (P_plef + B_pl)
         R_factor = 93.2 - I_d - I_e_eff
-
-        rtp_flow.R_factor = R_factor
+        MOS = self.compute_mos(R_factor)
         
+        rtp_flow.R_factor = R_factor
+        rtp_flow.MOS = MOS
+    
         
         #self.print_metrics()
         #print('')
-            
+
+    def compute_mos(self, R):
+        if R <= 0:
+            MOS = 1
+        elif R < 100:
+            MOS = 1 + 0.035 * R + R * (R - 60) * (100 - R) * 7 * pow(10, -6)
+        else:
+            MOS = 4.5
+        
+        return MOS
+
+
     def handle_sip_invite(self, packet):
         if 'sip_info' in packet:
             if packet['sip_info'] == 'INVITE':
